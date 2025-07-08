@@ -41,7 +41,7 @@ func main() {
 	table := makeTable()
 	table2 := makeTable()
 
-	menus[0] = makeMenu("Menu", "mainMenu", '1',
+	menus[0] = makeMenu("Menu", "mainMenu",
 		[]string{"table1", "table2", "table3", "table4", "table5"},
 		func(index int, mainText, secondaryText string, shortcut rune) bool {
 			if mainText == "table3" {
@@ -58,7 +58,7 @@ func main() {
 			return true
 		})
 
-	menus[1] = makeMenu("Menu2", "mainMenu2", '2',
+	menus[1] = makeMenu("Menu2", "mainMenu2",
 		[]string{"m2i1"},
 		func(index int, mainText, secondaryText string, shortcut rune) bool {
 			if mainText == "x" {
@@ -67,7 +67,7 @@ func main() {
 			return true
 		})
 
-	menus[2] = makeMenu("Menu3", "mainMenu3", '3',
+	menus[2] = makeMenu("Menu3", "mainMenu3",
 		[]string{"m3i1"},
 		func(index int, mainText, secondaryText string, shortcut rune) bool {
 			if mainText == "x" {
@@ -144,7 +144,6 @@ type menu struct {
 	list      *tview.List
 	label     *tview.TextView
 	pageLabel string
-	shortcut  rune
 }
 
 func (m *menu) close() {
@@ -181,10 +180,9 @@ func (m *menu) getPageLabel() string {
 	return m.pageLabel
 }
 
-func makeMenu(label string, pageLabel string, shortcut rune, options []string, selectFunc func(index int, mainText, secondaryText string, shortcut rune) bool) (m *menu) {
+func makeMenu(label string, pageLabel string, options []string, selectFunc func(index int, mainText, secondaryText string, shortcut rune) bool) (m *menu) {
 	m = new(menu)
 	m.pageLabel = pageLabel
-	m.shortcut = shortcut
 	m.labelText = label
 	m.label = tview.NewTextView().
 		SetText(label).
