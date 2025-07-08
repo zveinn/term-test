@@ -67,24 +67,17 @@ func main() {
 		switch event.Rune() {
 		case 'M', 'm':
 			if !menuOpen {
-				// Open the dropdown menu using Pages for proper overlay
+				// Simple overlay approach - just show the menu list on top
 				menuOpen = true
 
-				// Create pages for overlay
+				// Set the menu list to have a border for visibility
+				menuList.SetBorder(true)
+				menuList.SetTitle("Menu")
+
+				// Use Pages to overlay the menu
 				pages := tview.NewPages()
 				pages.AddPage("main", grid, true, true)
-
-				// Create a positioned container for the menu at top-left
-				menuContainer := tview.NewFlex().SetDirection(tview.FlexColumn).
-					AddItem(menuList, 20, 0, true).
-					AddItem(nil, 0, 1, false) // Spacer to push menu to left
-
-				// Position at top with spacer below
-				topContainer := tview.NewFlex().SetDirection(tview.FlexRow).
-					AddItem(menuContainer, len(menuOptions)+2, 0, true).
-					AddItem(nil, 0, 1, false) // Spacer to push menu to top
-
-				pages.AddPage("menu", topContainer, true, true)
+				pages.AddPage("menu", menuList, false, true)
 
 				app.SetRoot(pages, true).SetFocus(menuList)
 			}
