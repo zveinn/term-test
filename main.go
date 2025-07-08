@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/gdamore/tcell/v2"
@@ -14,27 +13,47 @@ var (
 	TUIPages     *tview.Pages
 	TUIHeader    *tview.Flex
 	TUIFooter    *tview.Flex
-	TUILeftPane  *tview.TextView
-	TUIRightPane *tview.TextView
+	TUILeftPane  tview.Primitive
+	TUIRightPane tview.Primitive
 	TUIError     *tuiError
 	menus        = make([]*menu, 10)
 )
 
+func AddToLeftPane(p tview.Primitive) {
+	TUIGrid.AddItem(p, 1, 0, 1, 1, 0, 0, true)
+	TUILeftPane = p
+}
+
+func AddToRightPane(p tview.Primitive) {
+	TUIGrid.AddItem(p, 1, 1, 1, 1, 0, 0, true)
+	TUIRightPane = p
+}
+
 func main() {
 	TUI = tview.NewApplication()
-	TUILeftPane = tview.NewTextView().SetText("left..")
-	TUIRightPane = tview.NewTextView().SetText("right..")
+
 	TUIGrid = tview.NewGrid()
 	TUIPages = tview.NewPages()
 	TUIHeader = tview.NewFlex().SetDirection(tview.FlexColumn)
 	TUIFooter = tview.NewFlex().SetDirection(tview.FlexColumn)
 	TUIError = makeErrorModal("mainErrorModal")
 
+	table := makeTable()
+	table2 := makeTable()
+
 	menus[0] = makeMenu("Menu", "mainMenu", '1',
 		[]string{"table1", "table2", "table3", "table4", "table5"},
 		func(index int, mainText, secondaryText string, shortcut rune) bool {
-			if mainText == "table1" {
+			if mainText == "table3" {
 				TUIError.showError(nil, "table 1 is not implemented")
+			}
+			if mainText == "table1" {
+				AddToLeftPane(table)
+				// TUI = TUI.SetFocus(table)
+			}
+			if mainText == "table2" {
+				AddToRightPane(table2)
+				// TUI = TUI.SetFocus(table2)
 			}
 			return true
 		})
@@ -42,7 +61,7 @@ func main() {
 	menus[1] = makeMenu("Menu2", "mainMenu2", '2',
 		[]string{"m2i1"},
 		func(index int, mainText, secondaryText string, shortcut rune) bool {
-			if mainText == "table1" {
+			if mainText == "x" {
 				TUIError.showError(nil, "table 1 is not implemented")
 			}
 			return true
@@ -51,7 +70,7 @@ func main() {
 	menus[2] = makeMenu("Menu3", "mainMenu3", '3',
 		[]string{"m3i1"},
 		func(index int, mainText, secondaryText string, shortcut rune) bool {
-			if mainText == "table1" {
+			if mainText == "x" {
 				TUIError.showError(nil, "table 1 is not implemented")
 			}
 			return true
@@ -65,28 +84,24 @@ func main() {
 
 	TUIPages.AddPage("grid", TUIGrid, true, true)
 
-	TUIGrid.AddItem(TUILeftPane, 1, 0, 1, 1, 0, 0, false)
-	TUIGrid.AddItem(TUIRightPane, 1, 1, 1, 1, 0, 0, false)
-
 	TUIGrid.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if handleMenuInputs(event.Rune()) {
 			return event
 		}
 		switch event.Rune() {
-		case 'j', 'k', 'l', 'h':
-			hasOpenMenu := false
-			for _, v := range menus {
-				if v == nil {
-					continue
-				}
-				if v.isOpen {
-					hasOpenMenu = true
-				}
-			}
-			if !hasOpenMenu {
-				TUILeftPane.SetText("no open menus")
-				return nil
-			}
+		// case 'j', 'k', 'l', 'h':
+		// 	hasOpenMenu := false
+		// 	for _, v := range menus {
+		// 		if v == nil {
+		// 			continue
+		// 		}
+		// 		if v.isOpen {
+		// 			hasOpenMenu = true
+		// 		}
+		// 	}
+		// 	if !hasOpenMenu {
+		// 		return nil
+		// 	}
 		case 'q', 'Q':
 			// Allow quitting with 'q'
 			TUI.Stop()
@@ -94,7 +109,11 @@ func main() {
 		}
 
 		switch event.Key() {
-		case tcell.KeyPgUp, tcell.KeyPgDn, tcell.KeyDown, tcell.KeyUp, tcell.KeyLeft, tcell.KeyRight:
+		case tcell.KeyLeft:
+			TUI.SetFocus(TUILeftPane)
+		case tcell.KeyRight:
+			TUI.SetFocus(TUIRightPane)
+		case tcell.KeyPgUp, tcell.KeyPgDn, tcell.KeyDown, tcell.KeyUp:
 			hasOpenMenu := false
 			for _, v := range menus {
 				if v == nil {
@@ -105,7 +124,6 @@ func main() {
 				}
 			}
 			if !hasOpenMenu {
-				TUILeftPane.SetText("no open menus")
 				return nil
 			}
 		}
@@ -132,19 +150,19 @@ type menu struct {
 func (m *menu) close() {
 	TUIPages.HidePage(m.getPageListLabel())
 	TUIPages.SendToBack(m.getPageListLabel())
-	TUI = TUI.SetFocus(TUIGrid)
+	TUI.SetFocus(TUIGrid)
 	m.isOpen = false
 }
 
 func (m *menu) open() {
-	x, y, width, height := m.label.GetRect()
+	x, y, _, _ := m.label.GetRect()
 	_, _, mw, mh := m.list.GetRect()
 	m.list.SetRect(x, y+1, mw, mh)
-	TUILeftPane.SetText(fmt.Sprintf("%s %d %d %d %d", m.labelText, x, y, width, height))
+	// TUILeftPane.SetText(fmt.Sprintf("%s %d %d %d %d", m.labelText, x, y, width, height))
 	m.isOpen = true
 	TUIPages.ShowPage(m.getPageListLabel())
 	TUIPages.SendToFront(m.getPageListLabel())
-	TUI = TUI.SetFocus(m.list)
+	TUI.SetFocus(m.list)
 }
 
 func (m *menu) toggleMenu() {
@@ -207,7 +225,6 @@ func makeMenu(label string, pageLabel string, shortcut rune, options []string, s
 		if ok {
 			TUIPages.HidePage(m.getPageListLabel())
 			TUIPages.SendToBack(m.getPageListLabel())
-			TUI = TUI.SetFocus(TUIGrid)
 			m.isOpen = false
 		}
 	})
@@ -220,7 +237,7 @@ func makeMenu(label string, pageLabel string, shortcut rune, options []string, s
 		if event.Key() == tcell.KeyEscape {
 			TUIPages.HidePage(m.getPageListLabel())
 			TUIPages.SendToBack(m.getPageListLabel())
-			TUI = TUI.SetFocus(TUIGrid)
+			TUI.SetFocus(TUIGrid)
 			m.isOpen = false
 			return nil
 		}
@@ -283,7 +300,6 @@ func handleMenuInputs(key rune) (wasMenuTrigger bool) {
 			}
 			menus[i].close()
 		}
-		TUIRightPane.SetText(string(key))
 		ri, err := strconv.Atoi(string(key))
 		if err != nil {
 			TUIError.showError(err, "menu item not initialized")
