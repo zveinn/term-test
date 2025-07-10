@@ -1,9 +1,6 @@
 package main
 
 import (
-	"os"
-	"runtime/debug"
-
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -40,9 +37,12 @@ var (
 func AddToLeftPane(p tview.Primitive) {
 	TUILeftPane = p
 	if TUIRightPane == nil {
+		addTextToFooter("NR")
 		TUIGrid.AddItem(p, 1, 0, 1, 2, 0, 0, true)
 	} else {
+		addTextToFooter("HR")
 		TUIGrid.AddItem(p, 1, 0, 1, 1, 0, 0, true)
+		TUIGrid.AddItem(TUIRightPane, 1, 1, 1, 1, 0, 0, true)
 	}
 	TUI.SetFocus(TUILeftPane)
 }
@@ -58,21 +58,19 @@ func AddToRightPane(p tview.Primitive) {
 }
 
 func RemoveFromRightPane() {
-	addTextToFooter("RM:right")
-	// TUIGrid.RemoveItem(TUILeftPane)
 	TUIGrid.RemoveItem(TUIRightPane)
+	TUIGrid.RemoveItem(TUIRightPane)
+	TUIRightPane = nil
 	TUIGrid.AddItem(TUILeftPane, 1, 0, 1, 2, 0, 0, true)
 	TUI.SetFocus(TUILeftPane)
-	TUIRightPane = nil
 }
 
 func RemoveFromLeftPane() {
-	addTextToFooter("RM:left")
 	TUIGrid.RemoveItem(TUILeftPane)
-	// TUIGrid.RemoveItem(TUIRightPane)
+	TUIGrid.RemoveItem(TUIRightPane)
+	TUILeftPane = nil
 	TUIGrid.AddItem(TUIRightPane, 1, 0, 1, 2, 0, 0, true)
 	TUI.SetFocus(TUIRightPane)
-	TUILeftPane = nil
 }
 
 func togglePaneFocus() {
@@ -155,34 +153,15 @@ func main() {
 
 	TUIPages.AddPage("grid", TUIGrid, true, true)
 	TUIPages.SetBackgroundColor(tcell.ColorBlue.TrueColor())
-	TUIPages.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		// fmt.Println(string(debug.Stack()))
-		os.WriteFile("stack.out", debug.Stack(), 0o777)
-		addTextToFooter("P:", event.Key())
-		switch event.Key() {
-		case tcell.KeyEscape:
-			return event
-		}
-		return event
-	})
-	TUIGrid.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		addTextToFooter("G:", event.Key())
-		switch event.Key() {
-		case tcell.KeyEscape:
-			return event
-		}
-		return event
-	})
 
 	TUI.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		addTextToFooter("T:", event.Key())
 		me := handleMenuInputs(event)
 		if me != nil {
 			return event
 		}
 
-		switch event.Key() {
-		case tcell.KeyEsc:
+		switch event.Rune() {
+		case 'q':
 			if TUILeftPane != nil {
 				if TUILeftPane.HasFocus() {
 					RemoveFromLeftPane()
@@ -195,9 +174,11 @@ func main() {
 					return nil
 				}
 			}
-			// addTextToFooter("FP")
-			// TUIGrid.Blur()
-			// TUI.SetFocus(TUIPages)
+		}
+
+		switch event.Key() {
+		case tcell.KeyEsc:
+			TUI.Stop()
 			return nil
 		case tcell.KeyTab:
 			togglePaneFocus()
@@ -207,8 +188,8 @@ func main() {
 	})
 
 	TUI.SetRoot(TUIPages, true)
+	// The grid causes off screen scrolling if not blurred
 	TUIGrid.Blur()
-	// TUIPages.Blur()
 	err := TUI.Run()
 	if err != nil {
 		panic(err)
