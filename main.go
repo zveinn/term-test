@@ -1,6 +1,9 @@
 package main
 
 import (
+	"os"
+	"runtime/debug"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -35,13 +38,68 @@ var (
 )
 
 func AddToLeftPane(p tview.Primitive) {
-	TUIGrid.AddItem(p, 1, 0, 1, 1, 0, 0, true)
 	TUILeftPane = p
+	if TUIRightPane == nil {
+		TUIGrid.AddItem(p, 1, 0, 1, 2, 0, 0, true)
+	} else {
+		TUIGrid.AddItem(p, 1, 0, 1, 1, 0, 0, true)
+	}
+	TUI.SetFocus(TUILeftPane)
 }
 
 func AddToRightPane(p tview.Primitive) {
-	TUIGrid.AddItem(p, 1, 1, 1, 1, 0, 0, true)
 	TUIRightPane = p
+	if TUILeftPane != nil {
+		TUIGrid.RemoveItem(TUILeftPane)
+		TUIGrid.AddItem(TUILeftPane, 1, 0, 1, 1, 0, 0, false)
+	}
+	TUIGrid.AddItem(p, 1, 1, 1, 1, 0, 0, true)
+	TUI.SetFocus(TUIRightPane)
+}
+
+func RemoveFromRightPane() {
+	addTextToFooter("RM:right")
+	// TUIGrid.RemoveItem(TUILeftPane)
+	TUIGrid.RemoveItem(TUIRightPane)
+	TUIGrid.AddItem(TUILeftPane, 1, 0, 1, 2, 0, 0, true)
+	TUI.SetFocus(TUILeftPane)
+	TUIRightPane = nil
+}
+
+func RemoveFromLeftPane() {
+	addTextToFooter("RM:left")
+	TUIGrid.RemoveItem(TUILeftPane)
+	// TUIGrid.RemoveItem(TUIRightPane)
+	TUIGrid.AddItem(TUIRightPane, 1, 0, 1, 2, 0, 0, true)
+	TUI.SetFocus(TUIRightPane)
+	TUILeftPane = nil
+}
+
+func togglePaneFocus() {
+	if TUILeftPane != nil {
+		if TUILeftPane.HasFocus() {
+			focusRightPane()
+			return
+		}
+	}
+	if TUIRightPane != nil {
+		if TUIRightPane.HasFocus() {
+			focusLeftPane()
+			return
+		}
+	}
+}
+
+func focusLeftPane() {
+	if TUILeftPane != nil {
+		TUI.SetFocus(TUILeftPane)
+	}
+}
+
+func focusRightPane() {
+	if TUIRightPane != nil {
+		TUI.SetFocus(TUIRightPane)
+	}
 }
 
 func main() {
@@ -51,9 +109,6 @@ func main() {
 	TUIPages = tview.NewPages()
 	TUIHeader = tview.NewFlex().SetDirection(tview.FlexColumn)
 	TUIFooter = tview.NewFlex().SetDirection(tview.FlexColumn)
-	addTextToFooter("Item1")
-	addTextToFooter("item2")
-	addTextToFooter("item3")
 
 	TUIError = makeErrorModal("mainErrorModal")
 
@@ -94,28 +149,58 @@ func main() {
 		}))
 
 	TUIGrid.SetRows(1, 0, 1).
-		SetColumns(0, 0).
+		SetColumns(0).
 		AddItem(TUIHeader, 0, 0, 1, 2, 0, 0, false).
 		AddItem(TUIFooter, 2, 0, 1, 2, 2, 1, false)
 
 	TUIPages.AddPage("grid", TUIGrid, true, true)
 	TUIPages.SetBackgroundColor(tcell.ColorBlue.TrueColor())
+	TUIPages.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		// fmt.Println(string(debug.Stack()))
+		os.WriteFile("stack.out", debug.Stack(), 0o777)
+		addTextToFooter("P:", event.Key())
+		switch event.Key() {
+		case tcell.KeyEscape:
+			return event
+		}
+		return event
+	})
+	TUIGrid.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		addTextToFooter("G:", event.Key())
+		switch event.Key() {
+		case tcell.KeyEscape:
+			return event
+		}
+		return event
+	})
 
 	TUI.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		addTextToFooter("T:", event.Key())
 		me := handleMenuInputs(event)
 		if me != nil {
 			return event
 		}
 
 		switch event.Key() {
-		case tcell.KeyTab:
-			if TUILeftPane.HasFocus() {
-				TUI.SetFocus(TUIRightPane)
-				TUILeftPane.Blur()
-			} else {
-				TUI.SetFocus(TUILeftPane)
-				TUIRightPane.Blur()
+		case tcell.KeyEsc:
+			if TUILeftPane != nil {
+				if TUILeftPane.HasFocus() {
+					RemoveFromLeftPane()
+					return nil
+				}
 			}
+			if TUIRightPane != nil {
+				if TUIRightPane.HasFocus() {
+					RemoveFromRightPane()
+					return nil
+				}
+			}
+			// addTextToFooter("FP")
+			// TUIGrid.Blur()
+			// TUI.SetFocus(TUIPages)
+			return nil
+		case tcell.KeyTab:
+			togglePaneFocus()
 		}
 
 		return event
@@ -123,7 +208,7 @@ func main() {
 
 	TUI.SetRoot(TUIPages, true)
 	TUIGrid.Blur()
-	TUIPages.Blur()
+	// TUIPages.Blur()
 	err := TUI.Run()
 	if err != nil {
 		panic(err)

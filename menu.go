@@ -144,17 +144,16 @@ func handleMenuInputs(event *tcell.EventKey) *tcell.EventKey {
 		menus[ri].toggleMenu()
 	default:
 	}
-	if event.Key() == tcell.KeyEscape {
+
+	switch event.Key() {
+	case tcell.KeyPgUp, tcell.KeyPgDn, tcell.KeyDown, tcell.KeyUp:
+		return event
+	case tcell.KeyEscape:
 		for i := range menus {
 			if menus[i] != nil {
 				menus[i].close()
 			}
 		}
-		return nil
-	}
-	switch event.Key() {
-	case tcell.KeyPgUp, tcell.KeyPgDn, tcell.KeyDown, tcell.KeyUp:
-		return event
 	}
 
 	return nil

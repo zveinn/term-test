@@ -44,11 +44,14 @@ func makeTableV2() (flex *tview.Flex) {
 	table := tview.NewTable()
 	table.SetBackgroundColor(tcell.ColorNone)
 
-	columns := make([]*tableColumn, 4)
-	columns[0] = newTableColumn("Path", nil)
-	columns[1] = newTableColumn("PoolIndex", nil)
+	columns := make([]*tableColumn, 7)
+	columns[0] = newTableColumn("PoolIndex", nil)
+	columns[1] = newTableColumn("Path", nil)
 	columns[2] = newTableColumn("State", nil)
 	columns[3] = newTableColumn("NodeID", nil)
+	columns[4] = newTableColumn("Size", nil)
+	columns[5] = newTableColumn("Used", nil)
+	columns[6] = newTableColumn("Available", nil)
 
 	for i, v := range columns {
 		table.SetCell(0, i, tview.NewTableCell(v.key))

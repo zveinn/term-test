@@ -1,12 +1,14 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/rivo/tview"
 )
 
-func addTextToFooter(text string) {
+func addTextToFooter(text ...any) {
 	footerText := tview.NewTextView()
-	footerText.SetText(text)
+	footerText.SetText(fmt.Sprint(text...))
 	footerText.SetBackgroundColor(footerBackground)
 	footerText.SetTextColor(footerForeground)
 	ic := TUIFooter.GetItemCount()
